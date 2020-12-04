@@ -24,10 +24,10 @@ Each node at config - settings for one target, each field at config is optional,
 
 # Code generation
 ```sh
-node ./sb-gen.js <path-to-config> <space-splitted-targets> <path-to-scheme> <path-to-output-folder>
+node ./sb-gen.js <path-to-config> <space-splitted-targets> <path-to-scheme> <path-to-output-file-without-extension>
 ```
 Example:
 ```sh
-node ./sb-gen.js ./config.json "ts cs" ./Packets.json ./out
+node ./sb-gen.js ./config.json "ts cs" ./Packets.json ./out/Packets
 ```
-2 files `./out/Packets.cs` and './out/Packets.ts' will be generated.
+2 files `./out/Packets.cs` and `./out/Packets.ts` will be generated.

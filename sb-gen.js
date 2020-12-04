@@ -40,7 +40,7 @@ if (process.argv.length != 6) {
 const cfgFile = process.argv[2]
 const langs = process.argv[3].split(' ')
 const inFile = process.argv[4]
-const outFolder = process.argv[5]
+const outFile = process.argv[5]
 const cfgFileData = JSON.parse(fs.readFileSync(cfgFile, 'utf8')) || {}
 const inFileData = JSON.parse(fs.readFileSync(inFile, 'utf8'))
 
@@ -207,6 +207,9 @@ const processTargetCS = (srcData, config) => {
                 createContent += `${' '.repeat(nsIndent + 8)}v.${fieldName} = _poolOf${fieldName}.Get();\n`
             } else {
                 content += `${' '.repeat(nsIndent + 4)}public ${targetType} ${fieldName};\n`
+                if (targetType === 'string') {
+                    createContent += `${' '.repeat(nsIndent + 8)}v.${fieldName} = "";\n`
+                }
             }
 
             // deserialize.
@@ -295,7 +298,7 @@ try {
                 return process.exit(1)
         }
         if (generated) {
-            fs.writeFileSync(`${outFolder}/${baseName}${Targets[target].ext}`, generated, 'utf8')
+            fs.writeFileSync(`${outFile}${Targets[target].ext}`, generated, 'utf8')
         }
     }
 } catch (ex) {
