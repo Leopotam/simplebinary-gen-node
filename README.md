@@ -7,13 +7,22 @@ Code generator support for generate user types from [simple binary format](https
 * Tool requires config for targets:
 ```json
 {
+    // Config for C# target. Yes, single line comments are supported inside config.
     "cs": {
+        // namespace for generated files.
         "namespace": "Test",
+        // header inside each generated file.
         "prefix": [
             "// Auto-generated file. Dont change manually, use gen-tool instead."
         ]
     },
+    /*
+    Config for typescript target.
+    Yes, multiple line comments are
+    supported inside config too.
+    */
     "ts": {
+        // header inside each generated file.
         "prefix": [
             "import { SimpleBinarySerializer } from './simple-binary'"
         ]
