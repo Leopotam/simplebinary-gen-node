@@ -41,12 +41,30 @@ const parseJSONC = (text, reviver) => {
     return JSON.parse(text.replace(/\\"|"(?:\\"|[^"])*"|(\/\/.*|\/\*[\s\S]*?\*\/)/g, (m, g) => g ? '' : m), reviver)
 }
 
+const processInclude = (dir, src) => {
+    if (!src['#include']) {
+        return src
+    }
+    if (!Array.isArray(src['#include'])) {
+        throw new Error('invalid #include directive inside scheme file.')
+    }
+    const includes = src['#include']
+    delete src['#include']
+    includes.reverse()
+    for (const incFile of includes) {
+        if (typeof incFile !== 'string') { throw new Error('#include: all entires should be strings.') }
+        const fileName = `${dir}/${incFile}`
+        src = { ...processInclude(path.dirname(fileName), parseJSONC(fs.readFileSync(fileName, 'utf8'))), ...src }
+    }
+    return src
+}
+
 const cfgFile = process.argv[2]
 const langs = process.argv[3].split(' ')
 const inFile = process.argv[4]
 const outFile = process.argv[5]
 const cfgFileData = parseJSONC(fs.readFileSync(cfgFile, 'utf8')) || {}
-const inFileData = parseJSONC(fs.readFileSync(inFile, 'utf8'))
+const inFileData = processInclude(path.dirname(inFile), parseJSONC(fs.readFileSync(inFile, 'utf8')))
 
 const processTargetTS = (srcData, config) => {
     const types = Targets['ts'].types
