@@ -5,7 +5,7 @@ Code generator support for generate user types from [simple binary format](https
 * Tool requires nodejs runtime, it should be installed somehow.
 * Tool requires user types scheme.
 * Tool requires config for targets:
-```json
+```jsonc
 {
     // Config for C# target. Yes, single line comments are supported inside config.
     "cs": {
