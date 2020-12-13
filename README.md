@@ -33,7 +33,7 @@ Each node at config - settings for one target, each field at config is optional,
 
 # Code generation
 ```sh
-node ./sb-gen.js <path-to-config> <space-splitted-targets> <path-to-scheme> <path-to-output-file-without-extension>
+node ./sb-gen.js <path-to-config> "<space-splitted-targets>" <path-to-scheme> <path-to-output-file-without-extension>
 ```
 Example:
 ```sh
