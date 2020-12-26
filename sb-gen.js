@@ -264,13 +264,13 @@ const processTargetCS = (srcData, commonFields, config) => {
                     recycleContent += `${' '.repeat(nsIndent + 8)}_poolOf${fieldName}.Recycle(${fieldName});\n`
                 } else {
                     readContent += `${' '.repeat(nsIndent + 12)}v.${fieldName}.Add(${targetType}.Deserialize(ref sbs, false));\n`
-                    // recycleContent += `${' '.repeat(nsIndent + 8)}if (${fieldName} != null) {\n`
-                    recycleContent += `${' '.repeat(nsIndent + 8)}for (int i = 0, iMax = ${fieldName}.Count; i < iMax; i++) {\n`
-                    recycleContent += `${' '.repeat(nsIndent + 12)}${fieldName}[i].Recycle();\n`
+                    recycleContent += `${' '.repeat(nsIndent + 8)}if (${fieldName} != null) {\n`
+                    recycleContent += `${' '.repeat(nsIndent + 12)}for (int i = 0, iMax = ${fieldName}.Count; i < iMax; i++) {\n`
+                    recycleContent += `${' '.repeat(nsIndent + 16)}${fieldName}[i].Recycle();\n`
+                    recycleContent += `${' '.repeat(nsIndent + 12)}}\n`
+                    recycleContent += `${' '.repeat(nsIndent + 12)}_poolOf${fieldName}.Recycle(${fieldName});\n`
+                    recycleContent += `${' '.repeat(nsIndent + 12)}${fieldName} = null;\n`
                     recycleContent += `${' '.repeat(nsIndent + 8)}}\n`
-                    recycleContent += `${' '.repeat(nsIndent + 8)}_poolOf${fieldName}.Recycle(${fieldName});\n`
-                    recycleContent += `${' '.repeat(nsIndent + 8)}${fieldName} = null;\n`
-                    // recycleContent += `${' '.repeat(nsIndent + 8)}}\n`
                 }
                 readContent += `${' '.repeat(nsIndent + 8)}}\n`
             } else {
