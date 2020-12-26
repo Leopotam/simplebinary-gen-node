@@ -65,8 +65,24 @@ const inFile = process.argv[4]
 const outFile = process.argv[5]
 const cfgFileData = parseJSONC(fs.readFileSync(cfgFile, 'utf8')) || {}
 const inFileData = processInclude(path.dirname(inFile), parseJSONC(fs.readFileSync(inFile, 'utf8')))
+let commonFieldsNode
+if (inFileData['#common']) {
+    commonFieldsNode = inFileData['#common']
+    delete inFileData['#common']
+} else {
+    commonFieldsNode = {}
+}
 
-const processTargetTS = (srcData, config) => {
+const checkForNoFields = (schema, fields) => {
+    for (const key in fields) {
+        if (Object.hasOwnProperty.call(schema, key)) {
+            return key
+        }
+    }
+    return null
+}
+
+const processTargetTS = (srcData, commonFields, config) => {
     const types = Targets['ts'].types
     let content =
         '/* eslint-disable no-unused-vars */\n'
@@ -87,7 +103,10 @@ const processTargetTS = (srcData, config) => {
         let writeContent =
             `\n${' '.repeat(4)}public serialize(sbs: SimpleBinarySerializer, withPacketType: boolean = true): void {\n`
             + `${' '.repeat(8)}if (withPacketType) { sbs.writeU16(${typeName}.SB_PacketId) }\n`
-        const fields = srcData[typeName]
+        let fields = srcData[typeName]
+        const invalidField = checkForNoFields(fields, commonFields)
+        if (invalidField) { throw new Error(`invalid field "${typeName}.${invalidField}" - field with same name already declared at "#common".`) }
+        fields = { ...commonFields, ...fields }
         let fieldsCount = 0
         for (const fieldName in fields) {
             fieldsCount++
@@ -102,7 +121,7 @@ const processTargetTS = (srcData, config) => {
             const isSimpleType = !!types[srcType]
             if (!isSimpleType) {
                 if (!srcData[srcType]) {
-                    throw new Error(`invalid type for ${typeName}.${fieldName}: ${fields[fieldName]}.`)
+                    throw new Error(`invalid type for "${typeName}.${fieldName}": "${fields[fieldName]}".`)
                 }
                 targetType = srcType
             } else {
@@ -166,7 +185,7 @@ const processTargetTS = (srcData, config) => {
     return content.trim()
 }
 
-const processTargetCS = (srcData, config) => {
+const processTargetCS = (srcData, commonFields, config) => {
     const namespace = config.namespace || ''
     const nsIndent = namespace ? 4 : 0
     const types = Targets['cs'].types
@@ -200,7 +219,10 @@ const processTargetCS = (srcData, config) => {
             + `${' '.repeat(nsIndent + 8)}${typeName} v = default;\n`
         let recycleContent =
             `\n${' '.repeat(nsIndent + 4)}public void Recycle() {\n`
-        const fields = srcData[typeName]
+        let fields = srcData[typeName]
+        const invalidField = checkForNoFields(fields, commonFields)
+        if (invalidField) { throw new Error(`invalid field "${typeName}.${invalidField}" - field with same name already declared at "#common".`) }
+        fields = { ...commonFields, ...fields }
         let fieldsCount = 0
         for (let fieldName in fields) {
             fieldsCount++
@@ -216,7 +238,7 @@ const processTargetCS = (srcData, config) => {
             const isSimpleType = !!types[srcType]
             if (!isSimpleType) {
                 if (!srcData[srcType]) {
-                    throw new Error(`invalid type for ${typeName}.${fieldName}: ${fields[fieldName]}`)
+                    throw new Error(`invalid type for "${typeName}.${fieldName}": "${fields[fieldName]}".`)
                 }
                 targetType = srcType
             } else {
@@ -239,13 +261,17 @@ const processTargetCS = (srcData, config) => {
                 readContent += `${' '.repeat(nsIndent + 8)}for (int i = 0, iMax = sbs.ReadU16(); i < iMax; i++) {\n`
                 if (isSimpleType) {
                     readContent += `${' '.repeat(nsIndent + 12)}v.${fieldName}.Add(sbs.Read${srcType.toUpperCase()}());\n`
+                    recycleContent += `${' '.repeat(nsIndent + 8)}_poolOf${fieldName}.Recycle(${fieldName});\n`
                 } else {
                     readContent += `${' '.repeat(nsIndent + 12)}v.${fieldName}.Add(${targetType}.Deserialize(ref sbs, false));\n`
+                    // recycleContent += `${' '.repeat(nsIndent + 8)}if (${fieldName} != null) {\n`
                     recycleContent += `${' '.repeat(nsIndent + 8)}for (int i = 0, iMax = ${fieldName}.Count; i < iMax; i++) {\n`
                     recycleContent += `${' '.repeat(nsIndent + 12)}${fieldName}[i].Recycle();\n`
                     recycleContent += `${' '.repeat(nsIndent + 8)}}\n`
+                    recycleContent += `${' '.repeat(nsIndent + 8)}_poolOf${fieldName}.Recycle(${fieldName});\n`
+                    recycleContent += `${' '.repeat(nsIndent + 8)}${fieldName} = null;\n`
+                    // recycleContent += `${' '.repeat(nsIndent + 8)}}\n`
                 }
-                recycleContent += `${' '.repeat(nsIndent + 8)}_poolOf${fieldName}.Recycle(${fieldName});\n`
                 readContent += `${' '.repeat(nsIndent + 8)}}\n`
             } else {
                 if (isSimpleType) {
@@ -303,20 +329,18 @@ const processTargetCS = (srcData, config) => {
     return content.trim()
 }
 
-const baseNameWithExtension = path.basename(inFile)
-const baseName = baseNameWithExtension.substr(0, baseNameWithExtension.lastIndexOf('.'))
 try {
     for (const target of langs) {
         let generated = ''
         switch (target) {
             case 'ts':
-                generated = processTargetTS(inFileData, cfgFileData[target])
+                generated = processTargetTS(inFileData, commonFieldsNode, cfgFileData[target])
                 break
             case 'cs':
-                generated = processTargetCS(inFileData, cfgFileData[target])
+                generated = processTargetCS(inFileData, commonFieldsNode, cfgFileData[target])
                 break
             default:
-                console.error(`invalid target: ${target}`)
+                console.error(`invalid target: "${target}".`)
                 return process.exit(1)
         }
         if (generated) {
