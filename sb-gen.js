@@ -87,22 +87,32 @@ const processTargetTS = (srcData, commonFields, config) => {
     let content =
         '/* eslint-disable no-unused-vars */\n'
         + '/* eslint-disable @typescript-eslint/no-unused-vars */\n'
+        + '/* eslint-disable comma-dangle */\n'
+        + '/* eslint-disable @typescript-eslint/comma-dangle */\n\n'
     if (config.prefix) {
         if (!Array.isArray(config.prefix)) { throw new Error('invalid config.prefix, should be array.') }
         content += `${config.prefix.join('\n')}\n`
     }
     content += '\n'
-    let typeIdx = 0
+
+    // enum of all packets.
+    content += `export enum SB_PacketType {\n`
+    for (const typeName in srcData) {
+        content += `${' '.repeat(4)}${typeName},\n`
+    }
+    content += '}\n\n'
+
     for (const typeName in srcData) {
         content += `export class ${typeName} {\n`
-        content += `${' '.repeat(4)}public static SB_PacketId: number = ${typeIdx}\n`
+        content += `${' '.repeat(4)}/** @deprecated Use SB_PacketType.${typeName} value instead. */\n`
+        content += `${' '.repeat(4)}public static SB_PacketId: SB_PacketType = SB_PacketType.${typeName}\n`
         let readContent =
             `${' '.repeat(4)}public static deserialize(sbs: SimpleBinarySerializer, withPacketType: boolean = true): ${typeName} {\n`
-            + `${' '.repeat(8)}if (withPacketType && sbs.readU16() !== ${typeName}.SB_PacketId) { throw new Error() }\n`
+            + `${' '.repeat(8)}if (withPacketType && sbs.readU16() !== SB_PacketType.${typeName}) { throw new Error() }\n`
             + `${' '.repeat(8)}const v = new ${typeName}()\n`
         let writeContent =
             `\n${' '.repeat(4)}public serialize(sbs: SimpleBinarySerializer, withPacketType: boolean = true): void {\n`
-            + `${' '.repeat(8)}if (withPacketType) { sbs.writeU16(${typeName}.SB_PacketId) }\n`
+            + `${' '.repeat(8)}if (withPacketType) { sbs.writeU16(SB_PacketType.${typeName}) }\n`
         let fields = srcData[typeName]
         const invalidField = checkForNoFields(fields, commonFields)
         if (invalidField) { throw new Error(`invalid field "${typeName}.${invalidField}" - field with same name already declared at "#common".`) }
@@ -180,7 +190,6 @@ const processTargetTS = (srcData, commonFields, config) => {
         content += `${writeContent}${' '.repeat(4)}}\n`
 
         content += '}\n\n'
-        typeIdx++
     }
     return content.trim()
 }
@@ -202,17 +211,28 @@ const processTargetCS = (srcData, commonFields, config) => {
     if (namespace) {
         content += `namespace ${namespace} {\n`
     }
+
+    // enum of all packets.
+    content += `${' '.repeat(nsIndent)}public enum SB_PacketType : ushort {\n`
+    for (const typeName in srcData) {
+        content += `${' '.repeat(nsIndent + 4)}${typeName},\n`
+    }
+    content += `${' '.repeat(nsIndent)}}\n\n`
+
     let typeIdx = 0
     for (const typeName in srcData) {
         content += `${' '.repeat(nsIndent)}public struct ${typeName} {\n`
+        content += `${' '.repeat(nsIndent + 4)}#if DEBUG\n`
+        content += `${' '.repeat(nsIndent + 4)}[Obsolete("Use SB_PacketType.${typeName} instead.")]\n`
+        content += `${' '.repeat(nsIndent + 4)}#endif\n`
         content += `${' '.repeat(nsIndent + 4)}public const ushort SB_PacketId = ${typeIdx};\n`
         let readContent =
             `\n${' '.repeat(nsIndent + 4)}public static ${typeName} Deserialize(ref SimpleBinarySerializer sbs, bool withPacketType = true) {\n`
-            + `${' '.repeat(nsIndent + 8)}if (withPacketType && sbs.ReadU16() != SB_PacketId) { throw new Exception(); }\n`
+            + `${' '.repeat(nsIndent + 8)}if (withPacketType && sbs.ReadU16() != (ushort)SB_PacketType.${typeName}) { throw new Exception(); }\n`
             + `${' '.repeat(nsIndent + 8)}var v = New();\n`
         let writeContent =
             `\n${' '.repeat(nsIndent + 4)}public void Serialize(ref SimpleBinarySerializer sbs, bool withPacketType = true) {\n`
-            + `${' '.repeat(nsIndent + 8)}if (withPacketType) { sbs.WriteU16(SB_PacketId); }\n`
+            + `${' '.repeat(nsIndent + 8)}if (withPacketType) { sbs.WriteU16((ushort)SB_PacketType.${typeName}); }\n`
         let poolContent = ''
         let createContent =
             `${' '.repeat(nsIndent + 4)}public static ${typeName} New() {\n`
