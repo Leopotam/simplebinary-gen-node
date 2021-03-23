@@ -106,10 +106,15 @@ const processTargetTS = (srcData, commonFields, config) => {
         content += `export class ${typeName} {\n`
         content += `${' '.repeat(4)}/** @deprecated Use SB_PacketType.${typeName} value instead. */\n`
         content += `${' '.repeat(4)}public static SB_PacketId: SB_PacketType = SB_PacketType.${typeName}\n`
+        let readContentStatic =
+            `${' '.repeat(4)}/** @deprecated Use "new ${typeName}()" instead. */\n`
+            + `${' '.repeat(4)}public static deserialize(sbs: SimpleBinarySerializer, withPacketType: boolean = true): ${typeName} {\n`
+            + `${' '.repeat(8)}return new ${typeName}(sbs, withPacketType)\n`
+            + `${' '.repeat(4)}}\n`
         let readContent =
-            `${' '.repeat(4)}public static deserialize(sbs: SimpleBinarySerializer, withPacketType: boolean = true): ${typeName} {\n`
+            `${' '.repeat(4)}public constructor(sbs?: SimpleBinarySerializer, withPacketType: boolean = true) {\n`
+            + `${' '.repeat(8)}if (!sbs) { return }\n`
             + `${' '.repeat(8)}if (withPacketType && sbs.readU16() !== SB_PacketType.${typeName}) { throw new Error() }\n`
-            + `${' '.repeat(8)}const v = new ${typeName}()\n`
         let writeContent =
             `\n${' '.repeat(4)}public serialize(sbs: SimpleBinarySerializer, withPacketType: boolean = true): void {\n`
             + `${' '.repeat(8)}if (withPacketType) { sbs.writeU16(SB_PacketType.${typeName}) }\n`
@@ -146,16 +151,16 @@ const processTargetTS = (srcData, commonFields, config) => {
             if (isArray) {
                 readContent += `${' '.repeat(8)}for (let i = 0, iMax = sbs.readU16(); i < iMax; i++) {\n`
                 if (isSimpleType) {
-                    readContent += `${' '.repeat(12)}v.${fieldName}.push(sbs.read${srcType.toUpperCase()}())\n`
+                    readContent += `${' '.repeat(12)}this.${fieldName}.push(sbs.read${srcType.toUpperCase()}())\n`
                 } else {
-                    readContent += `${' '.repeat(12)}v.${fieldName}.push(${targetType}.deserialize(sbs, false))\n`
+                    readContent += `${' '.repeat(12)}this.${fieldName}.push(new ${targetType}(sbs, false))\n`
                 }
                 readContent += `${' '.repeat(8)}}\n`
             } else {
                 if (isSimpleType) {
-                    readContent += `${' '.repeat(8)}v.${fieldName} = sbs.read${srcType.toUpperCase()}()\n`
+                    readContent += `${' '.repeat(8)}this.${fieldName} = sbs.read${srcType.toUpperCase()}()\n`
                 } else {
-                    readContent += `${' '.repeat(8)}v.${fieldName} = ${targetType}.deserialize(bl, false)\n`
+                    readContent += `${' '.repeat(8)}this.${fieldName} = new ${targetType}(bl, false)\n`
                 }
             }
 
@@ -183,8 +188,8 @@ const processTargetTS = (srcData, commonFields, config) => {
         }
         // deserialize.
         content +=
-            `${readContent}`
-            + `${' '.repeat(8)}return v\n`
+            `${readContentStatic}\n`
+            + `${readContent}`
             + `${' '.repeat(4)}}\n`
         // serialize.
         content += `${writeContent}${' '.repeat(4)}}\n`
