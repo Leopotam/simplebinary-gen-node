@@ -155,7 +155,7 @@ const processTargetTSMessage = (typeName, srcData, commonFields, types) => {
                 if (isEnum) {
                     readContent += `${' '.repeat(8)}this.${fieldName} = sbs.readU8()\n`
                 } else {
-                    readContent += `${' '.repeat(8)}this.${fieldName} = new ${targetType}(bl, false)\n`
+                    readContent += `${' '.repeat(8)}this.${fieldName} = new ${targetType}(sbs, false)\n`
                 }
             }
         }
@@ -343,7 +343,7 @@ const processTargetCSMessage = (typeName, srcData, commonFields, types, nsIndent
                     readContent += `${' '.repeat(nsIndent + 8)}v.${fieldName} = sbs.Read${srcType.toUpperCase()}();\n`
                 }
             } else {
-                readContent += `${' '.repeat(nsIndent + 8)}v.${fieldName} = new ${targetType}(bl);\n`
+                readContent += `${' '.repeat(nsIndent + 8)}v.${fieldName} = new ${targetType}(sbs);\n`
             }
         }
 
