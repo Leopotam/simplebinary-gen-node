@@ -201,7 +201,7 @@ const processTargetTSMessage = (typeName, srcData, commonFields, types) => {
     return content
 }
 
-const processTargetTSEnum = (typeName, srcData, commonFields, types) => {
+const processTargetTSEnum = (typeName, srcData) => {
     let content = `export enum ${typeName} {\n`
     const enumData = srcData[`${typeName}/enum`]
     if (!Array.isArray(enumData)) { throw new Error(`invalid enum "${typeName}" - array should be used.`) }
@@ -244,7 +244,7 @@ const processTargetTS = (srcData, commonFields, config) => {
         switch (typeNameParts[1]) {
             case 'enum':
 
-                content += processTargetTSEnum(typeName, srcData, commonFields, types)
+                content += processTargetTSEnum(typeName, srcData)
                 break
             default:
                 content += processTargetTSMessage(typeName, srcData, commonFields, types)
@@ -343,7 +343,7 @@ const processTargetCSMessage = (typeName, srcData, commonFields, types, nsIndent
                     readContent += `${' '.repeat(nsIndent + 8)}v.${fieldName} = sbs.Read${srcType.toUpperCase()}();\n`
                 }
             } else {
-                readContent += `${' '.repeat(nsIndent + 8)}v.${fieldName} = new ${targetType}(sbs);\n`
+                readContent += `${' '.repeat(nsIndent + 8)}v.${fieldName} = ${targetType}.Deserialize(ref sbs, false);\n`
             }
         }
 
@@ -397,7 +397,7 @@ const processTargetCSMessage = (typeName, srcData, commonFields, types, nsIndent
     return content
 }
 
-const processTargetCSEnum = (typeName, srcData, commonFields, types, nsIndent) => {
+const processTargetCSEnum = (typeName, srcData, nsIndent) => {
     let content = `${' '.repeat(nsIndent)}public enum ${typeName} : byte {\n`
     const enumData = srcData[`${typeName}/enum`]
     if (!Array.isArray(enumData)) { throw new Error(`invalid enum "${typeName}" - array should be used.`) }
@@ -444,7 +444,7 @@ const processTargetCS = (srcData, commonFields, config) => {
         const typeType = typeNameParts[1] || ''
         switch (typeNameParts[1]) {
             case 'enum':
-                content += processTargetCSEnum(typeName, srcData, commonFields, types, nsIndent)
+                content += processTargetCSEnum(typeName, srcData, nsIndent)
                 break
             default:
                 content += processTargetCSMessage(typeName, srcData, commonFields, types, nsIndent)
